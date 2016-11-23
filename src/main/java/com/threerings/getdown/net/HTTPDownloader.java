@@ -35,17 +35,6 @@ public class HTTPDownloader extends Downloader
     {
         URLConnection conn = ConnectionUtil.open(rsrc.getRemote());
         try {
-            // if we're accessing our data via HTTP, we only need a HEAD request
-            if (conn instanceof HttpURLConnection) {
-                HttpURLConnection hcon = (HttpURLConnection)conn;
-                hcon.setRequestMethod("HEAD");
-                hcon.connect();
-                // make sure we got a satisfactory response code
-                if (hcon.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    throw new IOException("Unable to check up-to-date for " +
-                                          rsrc.getRemote() + ": " + hcon.getResponseCode());
-                }
-            }
             return conn.getContentLength();
 
         } finally {
