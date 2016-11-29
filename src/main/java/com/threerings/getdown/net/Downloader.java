@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.threerings.getdown.data.Resource;
+import com.threerings.getdown.data.Resource;
 
 import static com.threerings.getdown.Log.log;
 

@@ -163,7 +163,7 @@ public class LaunchUtil
             }
 
             log.warning("Unable to renameTo(" + oldgd + ").");
-            // try to unfuck ourselves
+            // try to fix ourselves
             if (!oldgd.renameTo(curgd)) {
                 log.warning("Oh God, why dost thee scorn me so.");
             }

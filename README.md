@@ -39,20 +39,6 @@ for your installer. It is probably possible to compile Getdown with
 [GCJ](http://gcc.gnu.org/java/), which would make Getdown a viable choice for non-Java
 applications.
 
-## Obtaining Getdown
-
-The latest version of Getdown can be obtained thusly:
-
-  * Download the pre-built jar file from Maven Central:
-    [getdown-1.4.jar](http://repo2.maven.org/maven2/com/threerings/getdown/1.4/getdown-1.4.jar)
-  * Obtain the jar artifact via Maven with the following identifier: `com.threerings:getdown:1.4`.
-  * [Check out the code](https://github.com/threerings/getdown) and build it yourself.
-
-You can also:
-
-  * View the [javadoc documentation] online.
-  * Browse the [source code] online.
-
 ## Building
 
 Getdown is built with Maven in the standard ways. Invoke the following commands, for fun and

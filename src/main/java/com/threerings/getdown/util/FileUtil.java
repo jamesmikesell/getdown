@@ -5,16 +5,30 @@
 
 package com.threerings.getdown.util;
 
-import java.io.*;
+import static com.threerings.getdown.Log.log;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Pack200;
 import java.util.zip.GZIPInputStream;
 
-import com.samskivert.io.StreamUtil;
+import org.codehaus.plexus.archiver.UnArchiver;
+import org.codehaus.plexus.archiver.tar.TarGZipUnArchiver;
+import org.codehaus.plexus.archiver.zip.ZipUnArchiver;
 
-import static com.threerings.getdown.Log.log;
+import com.samskivert.io.StreamUtil;
+import com.threerings.getdown.data.CompressionType;
 
 /**
  * File related utilities.
@@ -124,4 +138,119 @@ public class FileUtil extends com.samskivert.util.FileUtil
             StreamUtil.close(packedJarIn);
         }
     }
+
+	public static boolean unpackJvm(File packedJar, File targetParent, CompressionType type)
+	{
+		log.info("Untaring jvm", packedJar, targetParent);
+
+		File decompressionFolder = new File(targetParent, "temp_vm");
+		File vmDir = new File(targetParent, LaunchUtil.LOCAL_JAVA_DIR);
+
+		try
+		{
+			deleteRecursive(decompressionFolder);
+			deleteRecursive(vmDir);
+		}
+		catch (Exception e)
+		{
+			log.warning("Error deleting old vm folder", e);
+			return false;
+		}
+
+		decompressionFolder.mkdirs();
+		vmDir.mkdirs();
+
+		final UnArchiver ua;
+		switch (type)
+		{
+		case TarGz:
+			ua = new TarGZipUnArchiver();
+			break;
+		case Zip:
+			ua = new ZipUnArchiver();
+			break;
+		default:
+			log.warning("Error setting unarchiver", type);
+			return false;
+		}
+
+		ua.setSourceFile(packedJar);
+		ua.setOverwrite(true);
+		ua.setDestDirectory(decompressionFolder);
+		ua.extract();
+
+		File binFolder = findFirstDirectory("bin", decompressionFolder);
+		if (binFolder != null)
+		{
+			log.info("Bin found " + binFolder.getPath());
+			try
+			{
+				for (File file : binFolder.getParentFile().listFiles())
+				{
+					File destination = new File(vmDir, file.getName());
+					Files.move(file.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				}
+			}
+			catch (IOException e)
+			{
+				log.warning("Error copying files", e);
+				return false;
+			}
+
+			try
+			{
+				deleteRecursive(decompressionFolder);
+			}
+			catch (Exception e)
+			{
+				log.warning("Error deleting compression folder", e);
+			}
+
+			return true;
+		}
+
+		return false;
+
+	}
+    
+	private static File findFirstDirectory(String name, File directory)
+	{
+		if (directory.isDirectory())
+		{
+			if (name.toLowerCase().equals(directory.getName().toLowerCase()))
+				return directory;
+
+			for (File file : directory.listFiles())
+			{
+				File found = findFirstDirectory(name, file);
+				if (found != null)
+					return found;
+			}
+		}
+
+		return null;
+	}
+
+	private static void deleteRecursive(File dir)
+	{
+		File[] currList;
+		Stack<File> stack = new Stack<File>();
+		stack.push(dir);
+		while (!stack.isEmpty())
+		{
+			if (stack.lastElement().isDirectory())
+			{
+				currList = stack.lastElement().listFiles();
+				if (currList.length > 0)
+				{
+					for (File curr : currList)
+						stack.push(curr);
+				}
+				else
+					stack.pop().delete();
+			}
+			else
+				stack.pop().delete();
+		}
+	}
 }

@@ -353,7 +353,7 @@ public class Application
         String pfile = "patch" + infix + _version + ".dat";
         try {
             URL remote = new URL(createVAppBase(_targetVersion), encodePath(pfile));
-            return new Resource(pfile, remote, getLocalPath(pfile), false);
+            return new RegularResource(pfile, remote, getLocalPath(pfile), false);
         } catch (Exception e) {
             log.warning("Failed to create patch resource path",
                 "pfile", pfile, "appbase", _appbase, "tvers", _targetVersion, "error", e);
@@ -368,17 +368,19 @@ public class Application
      */
     public Resource getJavaVMResource ()
     {
-        if (StringUtil.isBlank(_javaLocation)) {
+        String javaLocation;
+		if(!StringUtil.isBlank(_javaLocation)) 
+			javaLocation = _javaLocation;
+		else
             return null;
-        }
 
         String vmfile = LaunchUtil.LOCAL_JAVA_DIR + ".jar";
         try {
-            URL remote = new URL(createVAppBase(_targetVersion), encodePath(_javaLocation));
-            return new Resource(vmfile, remote, getLocalPath(vmfile), true);
+            URL remote = new URL(createVAppBase(_targetVersion), encodePath(javaLocation));
+            return new JvmResource(vmfile, remote, getLocalPath(vmfile));
         } catch (Exception e) {
             log.warning("Failed to create VM resource", "vmfile", vmfile, "appbase", _appbase,
-                "tvers", _targetVersion, "javaloc", _javaLocation, "error", e);
+                "tvers", _targetVersion, "javaloc", javaLocation, "error", e);
             return null;
         }
     }
@@ -392,7 +394,7 @@ public class Application
         String file = "full";
         try {
             URL remote = new URL(createVAppBase(_targetVersion), encodePath(file));
-            return new Resource(file, remote, getLocalPath(file), false);
+            return new RegularResource(file, remote, getLocalPath(file), false);
         } catch (Exception e) {
             log.warning("Failed to create full resource path",
                 "file", file, "appbase", _appbase, "tvers", _targetVersion, "error", e);
@@ -469,7 +471,7 @@ public class Application
                 cdata = ConfigUtil.parseConfig(_config, checkPlatform);
             }
             // otherwise, try reading data from our backup config file; thanks to funny windows
-            // bullshit, we have to do this backup file fiddling in case we got screwed while
+            // stuff, we have to do this backup file fiddling in case we got screwed while
             // updating getdown.txt during normal operation
             else if ((config = getLocalPath(CONFIG_FILE + "_old")).exists()) {
                 cdata = ConfigUtil.parseConfig(config, checkPlatform);
@@ -545,13 +547,19 @@ public class Application
         // check to see if we require a particular JVM version and have a supplied JVM
         vstr = (String)cdata.get("java_version");
         if (vstr != null) _javaMinVersion = parseLong(vstr, "m.invalid_java_version");
+        vstr = (String)cdata.get("java_version_zip");
+        if (vstr != null) _javaMinVersion = parseLong(vstr, "m.invalid_java_version");
         // we support java_min_version as an alias of java_version; it better expresses the check
         // that's going on and better mirrors java_max_version
         vstr = (String)cdata.get("java_min_version");
         if (vstr != null) _javaMinVersion = parseLong(vstr, "m.invalid_java_version");
+        vstr = (String)cdata.get("java_min_version_zip");
+        if (vstr != null) _javaMinVersion = parseLong(vstr, "m.invalid_java_version");
 
         // check to see if we require a particular max JVM version and have a supplied JVM
         vstr = (String)cdata.get("java_max_version");
+        if (vstr != null) _javaMaxVersion = parseLong(vstr, "m.invalid_java_version");
+        vstr = (String)cdata.get("java_max_version_zip");
         if (vstr != null) _javaMaxVersion = parseLong(vstr, "m.invalid_java_version");
 
         // check to see if we require a particular JVM version and have a supplied JVM
@@ -564,6 +572,11 @@ public class Application
         Object javaloc = cdata.get("java_location");
         if (javaloc instanceof String) {
             _javaLocation = (String)javaloc;
+        }
+       
+        Object javaZipLoc = cdata.get("java_location_zip");
+        if (javaZipLoc instanceof String && !StringUtil.isBlank((String)javaZipLoc)) {
+        	_javaLocation = (String)javaZipLoc;
         }
 
         // determine whether we have any tracking configuration
@@ -769,6 +782,8 @@ public class Application
     public boolean haveValidJavaVersion ()
     {
         // if we're doing no version checking, then yay!
+    	log.info("java min version", _javaMinVersion);
+    	log.info("java max version", _javaMaxVersion);
         if (_javaMinVersion == 0 && _javaMaxVersion == 0) return true;
 
         try {
@@ -784,14 +799,14 @@ public class Application
                 File vmdir = new File(_appdir, LaunchUtil.LOCAL_JAVA_DIR);
                 File relfile = new File(vmdir, "release");
                 if (!relfile.exists()) {
-                    log.warning("Unpacked JVM missing 'release' file. Assuming valid version.");
-                    return true;
+                    log.error("Unpacked JVM missing 'release' file.");
+                    return false;
                 }
 
                 long vmvers = VersionUtil.readReleaseVersion(relfile, _javaVersionRegex);
                 if (vmvers == 0L) {
-                    log.warning("Unable to read version from 'release' file. Assuming valid.");
-                    return true;
+                    log.error("Unable to read version from 'release' file.");
+                    return false;
                 }
 
                 version = vmvers;
@@ -801,7 +816,7 @@ public class Application
             if (_javaExactVersionRequired) {
                 if (version == _javaMinVersion) return true;
                 else {
-                    log.warning("An exact Java VM version is required.", "current", version,
+                    log.error("An exact Java VM version is required.", "current", version,
                                 "required", _javaMinVersion);
                     return false;
                 }
@@ -1540,7 +1555,7 @@ public class Application
     protected Resource createResource (String path, boolean unpack)
         throws MalformedURLException
     {
-        return new Resource(path, getRemoteURL(path), getLocalPath(path), unpack);
+        return new RegularResource(path, getRemoteURL(path), getLocalPath(path), unpack);
     }
 
     /** Used to parse resources with the specified name. */

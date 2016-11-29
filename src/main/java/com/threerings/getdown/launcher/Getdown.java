@@ -1,9 +1,6 @@
-//
-// Getdown - application installer, patcher and launcher
-// Copyright (C) 2004-2014 Three Rings Design, Inc.
-// https://raw.github.com/threerings/getdown/master/LICENSE
-
 package com.threerings.getdown.launcher;
+ 
+import static com.threerings.getdown.Log.log;
 
 import java.awt.BorderLayout;
 import java.awt.Container;
@@ -14,15 +11,6 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-
-import javax.imageio.ImageIO;
-import javax.swing.AbstractAction;
-import javax.swing.ImageIcon;
-import javax.swing.JApplet;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLayeredPane;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,13 +19,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
-
 import java.security.cert.Certificate;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -49,17 +34,20 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import ca.beq.util.win32.registry.RegistryKey;
-import ca.beq.util.win32.registry.RegistryValue;
-import ca.beq.util.win32.registry.RootKey;
+import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
+import javax.swing.ImageIcon;
+import javax.swing.JApplet;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
 
 import com.samskivert.swing.util.SwingUtil;
 import com.samskivert.text.MessageUtil;
 import com.samskivert.util.RunAnywhere;
 import com.samskivert.util.StringUtil;
-
-import com.threerings.getdown.data.Application.UpdateInterface.Step;
 import com.threerings.getdown.data.Application;
+import com.threerings.getdown.data.Application.UpdateInterface.Step;
 import com.threerings.getdown.data.Resource;
 import com.threerings.getdown.data.SysProps;
 import com.threerings.getdown.net.Downloader;
@@ -72,9 +60,11 @@ import com.threerings.getdown.util.MetaProgressObserver;
 import com.threerings.getdown.util.ProgressObserver;
 import com.threerings.getdown.util.VersionUtil;
 
-import static com.threerings.getdown.Log.log;
+import ca.beq.util.win32.registry.RegistryKey;
+import ca.beq.util.win32.registry.RegistryValue;
+import ca.beq.util.win32.registry.RootKey;
 
-/**
+/** 
  * Manages the main control for the Getdown application updater and deployment system.
  */
 public abstract class Getdown extends Thread
@@ -409,21 +399,6 @@ public abstract class Getdown extends Thread
 
             //setStep(Step.START);
             for (int ii = 0; ii < MAX_LOOPS; ii++) {
-                // if we aren't running in a JVM that meets our version requirements, either
-                // complain or attempt to download and install the appropriate version
-                if (!_app.haveValidJavaVersion()) {
-                    // download and install the necessary version of java, then loop back again and
-                    // reverify everything; if we can't download java; we'll throw an exception
-                    log.info("Attempting to update Java VM...");
-                    setStep(Step.UPDATE_JAVA);
-                    _enableTracking = true; // always track JVM downloads
-                    try {
-                        updateJava();
-                    } finally {
-                        _enableTracking = false;
-                    }
-                    continue;
-                }
 
                 // make sure we have the desired version and that the metadata files are valid...
                 setStep(Step.VERIFY_METADATA);
@@ -433,6 +408,22 @@ public abstract class Getdown extends Thread
                     update();
                     // loop back again and reverify the metadata
                     continue;
+                }
+
+                // if we aren't running in a JVM that meets our version requirements, either
+                // complain or attempt to download and install the appropriate version
+                if (!_app.haveValidJavaVersion()) {
+                	// download and install the necessary version of java, then loop back again and
+                	// reverify everything; if we can't download java; we'll throw an exception
+                	log.info("Attempting to update Java VM...");
+                	setStep(Step.UPDATE_JAVA);
+                	_enableTracking = true; // always track JVM downloads
+                	try {
+                		updateJava();
+                	} finally {
+                		_enableTracking = false;
+                	}
+                	continue;
                 }
 
                 // now verify our resources...
@@ -503,7 +494,7 @@ public abstract class Getdown extends Thread
                 // now we'll loop back and try it all again
             }
 
-            log.warning("Pants! We couldn't get the job done.");
+            log.warning("Failure: We couldn't get the job done.");
             throw new IOException("m.unable_to_repair");
 
         } catch (Exception e) {
@@ -604,7 +595,7 @@ public abstract class Getdown extends Thread
                 Runtime.getRuntime().exec(cmd);
             } catch (Exception e) {
                 log.warning("Failed to mark VM binary as executable", "cmd", cmd, "error", e);
-                // we should do something like tell the user or something but fucking fuck
+                // we should do something like tell the user or something 
             }
         }
 
@@ -873,7 +864,7 @@ public abstract class Getdown extends Thread
                     _layers = new JLayeredPane();
                     _container.add(_layers, BorderLayout.CENTER);
                     _patchNotes = new JButton(new AbstractAction(_msgs.getString("m.patch_notes")) {
-                        @Override public void actionPerformed (ActionEvent event) {
+                        public void actionPerformed (ActionEvent event) {
                             showDocument(_ifc.patchNotesUrl);
                         }
                     });
@@ -886,7 +877,7 @@ public abstract class Getdown extends Thread
                         _playAgain.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                         _playAgain.setFont(StatusPanel.FONT);
                         _playAgain.addActionListener(new ActionListener() {
-                            @Override public void actionPerformed (ActionEvent event) {
+                            public void actionPerformed (ActionEvent event) {
                                 _playAgain.setVisible(false);
                                 _stepMinPercent = _lastGlobalPercent = 0;
                                 EventQueue.invokeLater(new Runnable() {

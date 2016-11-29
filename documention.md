@@ -327,39 +327,38 @@ your application may require a newer version of the JVM, to work around bugs, or
 new features. As such, it is possible to instruct Getdown to download and install a private JVM for
 use when running your application.
 
-You are required to package the JVMs for the platforms you wish to support into `.jar` files that
-have the same structure as an installed version of that JVM. Examples of such `.jar` files can be
-seen [for Windows](http://download.threerings.net/yoclient/java_windows.jar) and
-[for Linux](http://download.threerings.net/yoclient/java_linux.jar).
+You are required to package the JVMs for the platforms you wish to support into `.tar.gz` or `.zip` (or repackaged as a `.jar*` 
+file, however see special requiriements for `.jar*` files below) files that have the same structure as an installed version of 
+that JVM.  Getdown finds the first `bin` folder within the archive and expects that it will have the `java` executable. Getdown 
+will also grab all siblings files/folders of the `bin` folder.
 
-**Note**: the packed JVM must be in a top-level directory named `java_vm`. Getdown will unpack the
-JVM into the app directory and it must then be able to find:
+**Note**: A JVM packed into a `.jar`, `.jar.pack.gz` or `.jar.pack` have the extra requirement that everything must be in a top-level directory 
+named `java_vm` . Getdown will unpack the JVM into the app directory and it must then be able to find:
 
 ```
 %appdir%/java_vm/bin/java (or java.exe for a Windows JVM)
 ```
 
-otherwise it will be unable to use the custom JVM and will fall back to the JVM used to launch
-Getdown.
-
 An example configuration for custom JVM installation is as follows:
 
-    java_min_version = 1050006
-    java_location = [windows] /client/java_windows.jar
-    java_location = [linux] /client/java_linux.jar
+    java_min_version_zip = 1050006
+    java_location_zip = [windows] /client/java_windows.zip
+    java_location_zip = [linux] /client/java_linux.tar.gz
 
-The `java_min_version` directive specifies the minimum version of JVM needed. Note that
-`java_version` is supported as a legacy alias of `java_min_version`.
+The `java_min_version_zip` directive specifies the minimum version of JVM needed. Note that
+`java_version_zip` is supported as a legacy alias of `java_min_version_zip`.
 
 If the JVM used to invoke Getdown is not of sufficiently high version, it will attempt to download
-the JVM specified by the `java_location` directive. As shown above, this should include
+the JVM specified by the `java_location_zip` directive. As shown above, this should include
 platform-specific alternatives (see below for details on platform-specific directives) for each
 platform for which a JVM is available for download.
 
 
-**JVM version identification**: By default, the JVM version is obtained from the output of
-`System.getProperty("java.version")` in the following way. `java.version` is of the form
-`MAJ.MIN.REV_PATCH`. A numeric value is computed that is equal to:
+**JVM version identification**: By default, the version info of the JVM used to *launch getdown* 
+(not the custom JVM that may be downloaded to run the app) is obtained from the output 
+of `System.getProperty("java.version")`.  Additionally, the version info of a custom downloaded JVM 
+is determined by reading the `release` text file in the archive. `java.version` is of the form `MAJ.MIN.REV_PATCH`. 
+A numeric value is computed that is equal to:
 
     PATCH + 100 * (REV + 100 * (MIN + 100 * MAJ))
 
@@ -378,7 +377,7 @@ numbers matched by the regular expression in the same way as above:
     BUILD + 100 * (PATCH + 100 * (REV + 100 * (MIN + 100 * MAJ)))
 
 If you customize the version identification thusly, you must be sure to include the build version
-in your `java_min_version` and related properties. A version would look like `108003113` (parsed
+in your `java_min_version_zip` and related properties. A version would look like `108003113` (parsed
 from `1.8.0_31-b13`) rather than just `1080031`.
 
 Note that any optional group in the regular expression will be treated as zero if it does not
@@ -387,30 +386,30 @@ all non-digit characters. This allows you to match `(_\d+)?` as a single simple 
 leading underscore will be ignored.
 
 **Max JVM version**: One can also specify a maximum JVM version using the same format as
-`java_min_version` using the `java_max_version` property. If the JVM used to invoke Getdown exceeds
-the max version, the same attempt to download and use the `java_location` JVM is made.
+`java_min_version_zip` using the `java_max_version_zip` property. If the JVM used to invoke Getdown exceeds
+the max version, the same attempt to download and use the `java_location_zip` JVM is made.
 
 **Exact JVM version**: One can specify that an exact version of the JVM is required, and Getdown
 will attempt to download a JVM if the installed JVM does not exactly match the version in
-`java_min_version`. This behavior is activated via:
+`java_min_version_zip`. This behavior is activated via:
 
     java_exact_version_required = true
 
-This can also be accomplished by setting `java_min_version` and `java_max_version` to the same
+This can also be accomplished by setting `java_min_version_zip` and `java_max_version_zip` to the same
 value, but legacy and the convenience of not repeating a long complicated number in your
 configuration motivates us to keep both approaches.
 
 **JVM download URL**: Note that in the above configuration, we are taking advantage of a property
 of URL composition. The full URL to the JVM will be computed by combining the value of
-`java_location` with the value of `appbase`. However, in this case `java_location` is an absolute
+`java_location_zip` with the value of `appbase`. However, in this case `java_location_zip` is an absolute
 path (it starts with a `/`) which means that any path component of the `appbase` will be ignored.
 Thus we may still have a versioned `appbase` without having to replicate our JVMs every time we
 make a release of our application. For example:
 
     appbase = http://s3download.banghowdy.com/bang/client/%VERSION%
-    java_min_version = 1050006
-    java_location = [windows] /client/java_windows.jar
-    java_location = [linux] /client/java_linux.jar
+    java_min_version_zip = 1050006
+    java_location_zip = [windows] /client/java_windows.jar
+    java_location_zip = [linux] /client/java_linux.jar
 
 will yield the following URL for downloading the JVM on Linux:
 
